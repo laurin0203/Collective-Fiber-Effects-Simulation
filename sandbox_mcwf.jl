@@ -5,6 +5,7 @@ using PyPlot
 using LinearAlgebra
 using Statistics
 using Base.Threads
+import Dates
 
 println("Threads: ", Threads.nthreads())
 
@@ -75,7 +76,6 @@ const Δc    = 1Γ
 gas = ( (4 * κas * gs^2 * Ωp^2 * (((γ31 + γ32) / 2)^2 + Δc^2)) / (κs * Δp^2) )^(1/4)
 
 Ωc = gas
-
 
 #################################################
 #      check for superradiant laser regime      #
@@ -216,7 +216,7 @@ collapse = [C_s_cav, C_as_cav, C_14, C_24, C_23, C_13] # , C_14, C_13, C_12, C_2
 #################################################
 #            density matrix numerics            #
 #################################################
-t_end = 5000
+t_end = 2000
 t_span = range(0, t_end, length=800)
 
 @assert ishermitian(H)
@@ -226,7 +226,8 @@ t_span = range(0, t_end, length=800)
 Ns = Adag_s_coll * A_s_coll
 Nas = Adag_as_coll * A_as_coll
 
-N_traj = 300
+# number of individual Monte-Carlo trajectories
+N_traj = 1000
 N_t = length(t_span)
 
 
@@ -256,6 +257,7 @@ Threads.@threads for i in 1:N_traj
     )
 end
 
+# here we add up all the trajectories
 for r in results
     exp_ns_mcwf  .+= r.ns
     exp_nas_mcwf .+= r.nas
@@ -267,7 +269,7 @@ end
 
 println("Solving done. Calculating averages...")
 
-# expectation values
+# to form the arithmetric mean, we divide by the number of trajectories
 # 4*1e-4 from where
 exp_ns_mcwf  ./= N_traj
 exp_nas_mcwf ./= N_traj
@@ -283,52 +285,47 @@ println("Expectation values have been calculated.")
 #################################################
 #                    plotting                   #
 #################################################
-figure(figsize=(16,6))
 
-subplot(2, 3, 1)
-plot(t_span, pop4_mcwf)
-title(L"\text{Population of } |4\rangle")
+timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
+
+figure(figsize=(8, 4))
+
+
+populations = [pop1_mcwf, pop2_mcwf, pop3_mcwf, pop4_mcwf]
+
+for i in eachindex(populations)
+    plot(t_span, populations[i], label=L"\langle\sigma_{%$(i)%$(i)}\rangle")
+end
+
+title("population propability")
 xlabel(L"Γt")
-ylabel(L"\langle \sigma_{44} \rangle")
-ylim([0, atom_number])
-println("Maximum population propability of |4>: ", maximum(pop4_mcwf))
-
-
-subplot(2, 3, 2)
-plot(t_span, pop3_mcwf)
-title(L"\text{Population of } |3\rangle")
-xlabel(L"Γt")
-ylabel(L"\langle \sigma_{33} \rangle")
-ylim([0, atom_number])
-println("Maximum population propability of |3>: ", maximum(pop3_mcwf))
-
-subplot(2, 3, 3)
-plot(t_span, pop2_mcwf)
-title(L"\text{Population of } |2\rangle")
-xlabel(L"Γt")
-ylabel(L"\langle \sigma_{22} \rangle")
-ylim([0, atom_number])
-
-subplot(2, 3, 4)
-plot(t_span, pop1_mcwf)
-title(L"\text{Population of } |1\rangle")
-xlabel(L"Γt")
-ylabel(L"\langle \sigma_{11} \rangle")
-ylim([0, atom_number])
-
-subplot(2, 3, 5)
-plot(t_span, exp_ns_mcwf/atom_number)
-title("Relative Intensity on Stokes transition")
-xlabel(L"Γt")
-ylabel("intensity/atom number / a.u.")
-ylim([0, maximum(real.(exp_ns_mcwf/atom_number)) + 0.1*maximum(real.(exp_ns_mcwf/atom_number))])
-
-subplot(2, 3, 6)
-plot(t_span, exp_nas_mcwf/atom_number)
-title("Relative Intensity on anti-Stokes transition")
-xlabel(L"Γt")
-ylabel("intensity/atom number / a.u.")
-ylim([0, maximum(real.(exp_nas_mcwf/atom_number)) + 0.1*maximum(real.(exp_nas_mcwf/atom_number))])
+ylabel(L"\langle\sigma_{ii}\rangle")
+legend(loc="upper right")
+grid(true)
 
 tight_layout()
+savefig("C:/Users/lauri/OneDrive/Desktop/Uni/Physik/Master/Thesis/Julia_4LS_model/Simulation plots/populations_$(timestamp)_Ωp_$(Ωp)_gs$(gs)_κs_$(κs)_κas_$(κas).pdf", dpi=300)
+
+figure(figsize=(8, 4))
+
+intensities = [(exp_ns_mcwf, "Stokes transition"), (exp_nas_mcwf, "anti-Stokes transition")]
+
+max_stokes          = maximum(real.(exp_ns_mcwf/atom_number))
+max_anti_stokes     = maximum(real.(exp_nas_mcwf/atom_number))
+maximum_intensity   = max(max_stokes, max_anti_stokes)
+
+for i in eachindex(intensities)
+    plot(t_span, intensities[i][1]/atom_number, label=intensities[i][2])
+end
+
+title("Relative intensities on Raman transitions")
+xlabel(L"Γt")
+ylabel("intensity/atom numer / a.u.")
+ylim(-0.05, 1.1*maximum_intensity)
+legend(loc="lower right")
+grid(true)
+
+tight_layout()
+savefig("C:/Users/lauri/OneDrive/Desktop/Uni/Physik/Master/Thesis/Julia_4LS_model/Simulation plots/intensities_$(timestamp)_Ωp_$(Ωp)_gs_$(gs)_κs_$(κs)_κas_$(κas).pdf", dpi=300)
+
 show()

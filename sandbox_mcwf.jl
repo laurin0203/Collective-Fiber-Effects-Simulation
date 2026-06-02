@@ -59,23 +59,26 @@ const atom_number = 1
 
 const hbar  = 1.0
 const Γ     = 1.0 # renormalize to Γ = 2π * 6 * 1e6 (MHz)
+const Ωp    = 3Γ
 const gs    = 1Γ
-const Ωp    = 1.1Γ
 const κs    = 1Γ
 const κas   = 1Γ
 const ω2    = 0
 const γ42   = 0
 const γ41   = 0
-const γ31   = 0.01Γ
-const γ32   = 0.01Γ
+const γ31   = 0.1Γ
+const γ32   = 0.1Γ
 const γ21   = 0
-const Δp    = 5Γ
-const Δc    = 1Γ
+const Δp    = 10Γ
+const Δc    = 1.2Γ
 
 # define gas and Ωc in dependence on the parameters gs, Ωp of the Stokes photon generation
-gas = ( (4 * κas * gs^2 * Ωp^2 * (((γ31 + γ32) / 2)^2 + Δc^2)) / (κs * Δp^2) )^(1/4)
+# gas = ( (4 * κas * gs^2 * Ωp^2 * (((γ31 + γ32) / 2)^2 + Δc^2)) / (κs * Δp^2) )^(1/4)
 
-Ωc = gas
+# gas = sqrt(-((2*Δc^2)/((γ31+γ32)^2)) + sqrt((κas/κs) * ((gs^2*Ωp^2)/Δp^2) * (1 + ((4*Δc^2)/(γ31+γ32)^2))))
+
+Ωc = 1.15Γ
+gas = sqrt(κas/κs * (gs^2*Ωp^2)/(Δp^2) * ((γ31 + γ32)^2 + 4*Δc^2)/(Ωc^2*(γ31+γ32)^2 + 4*Δc^2))
 
 #################################################
 #      check for superradiant laser regime      #
@@ -238,6 +241,7 @@ pop4_mcwf    = zeros(Float64, N_t)
 pop3_mcwf    = zeros(Float64, N_t)
 pop2_mcwf    = zeros(Float64, N_t)
 pop1_mcwf    = zeros(Float64, N_t)
+ΔStark       = zeros(Float64, N_t)
 
 println("Starting to solve for the wave function using $N_traj monte carlo trajectories.")
 
@@ -253,9 +257,12 @@ Threads.@threads for i in 1:N_traj
         p4  = real.(expect(Sigma44_coll, Ψt)),
         p3  = real.(expect(Sigma33_coll, Ψt)),
         p2  = real.(expect(Sigma22_coll, Ψt)),
-        p1  = real.(expect(Sigma11_coll, Ψt))
+        p1  = real.(expect(Sigma11_coll, Ψt)),
+        delta1  = (Ωp^2/(4*Δp)) .+ (gs^2/Δp) .* real.(expect(Ns, Ψt)),
+        delta2  = (Ωc^2/(4*Δc)) .+ (gas^2/Δc) .* real.(expect(Nas, Ψt)),
     )
 end
+
 
 # here we add up all the trajectories
 for r in results
@@ -265,6 +272,7 @@ for r in results
     pop3_mcwf    .+= r.p3
     pop2_mcwf    .+= r.p2
     pop1_mcwf    .+= r.p1
+    ΔStark       .+= r.delta2 - r.delta1
 end
 
 println("Solving done. Calculating averages...")
@@ -278,7 +286,8 @@ pop3_mcwf    ./= N_traj
 pop2_mcwf    ./= N_traj
 pop1_mcwf    ./= N_traj
 exp_ns_mcwf  ./= (4*1e-4)
-exp_nas_mcwf  ./= (4*1e-4)
+exp_nas_mcwf ./= (4*1e-4)
+ΔStark       ./= N_traj
 
 println("Expectation values have been calculated.")
 
@@ -288,7 +297,7 @@ println("Expectation values have been calculated.")
 
 timestamp = Dates.format(Dates.now(), "yyyy-mm-dd_HH-MM-SS")
 
-figure(figsize=(8, 4))
+figure(figsize=(5, 3))
 
 
 populations = [pop1_mcwf, pop2_mcwf, pop3_mcwf, pop4_mcwf]
@@ -306,7 +315,7 @@ grid(true)
 tight_layout()
 savefig("C:/Users/lauri/OneDrive/Desktop/Uni/Physik/Master/Thesis/Julia_4LS_model/Simulation plots/populations_$(timestamp)_Ωp_$(Ωp)_gs$(gs)_κs_$(κs)_κas_$(κas).pdf", dpi=300)
 
-figure(figsize=(8, 4))
+figure(figsize=(5, 3))
 
 intensities = [(exp_ns_mcwf, "Stokes transition"), (exp_nas_mcwf, "anti-Stokes transition")]
 
@@ -327,5 +336,14 @@ grid(true)
 
 tight_layout()
 savefig("C:/Users/lauri/OneDrive/Desktop/Uni/Physik/Master/Thesis/Julia_4LS_model/Simulation plots/intensities_$(timestamp)_Ωp_$(Ωp)_gs_$(gs)_κs_$(κs)_κas_$(κas).pdf", dpi=300)
+
+figure(figsize=(5, 3))
+
+plot(t_span, ΔStark)
+title("Difference in Stark-shifts")
+xlabel(L"Γt")
+ylabel(L"Δ_\text{Stark} = \delta^{\text{(tot)}}_2 - \delta^{\text{(tot)}}_1")
+#ylim(-1.1*minimum(ΔStark), 1.1*maximum(ΔStark))
+grid(true)
 
 show()

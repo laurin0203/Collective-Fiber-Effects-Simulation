@@ -42,27 +42,27 @@ const atom_number = 1
 
 # const hbar  = 1.0
 # const Γ     = 1.0 # renormalize to Γ = 2π * 6 * 1e6 (MHz)
+# const Ωp    = 3Γ
 # const gs    = 1Γ
-# const gas   = 0.3Γ
-# const Ωp    = 0.4Γ
-# const Ωc    = 0.3Γ
 # const κs    = 1Γ
 # const κas   = 1Γ
-# const ω2    = 0 #2π*6.83468261090429*1e9 # -> can practically be set to 0 due to high oscillations, no effect on dynamics at all
+# const ω2    = 0
 # const γ42   = 0
 # const γ41   = 0
-# const γ31   = 0.01Γ
-# const γ32   = 0.01Γ
+# const γ31   = 0.1Γ
+# const γ32   = 0.1Γ
 # const γ21   = 0
-# const Δp    = 5Γ
-# const Δc    = 1Γ
+# const Δp    = 10Γ
+# const Δc    = 1.2Γ
 
 const hbar  = 1.0
 const Γ     = 1.0 # renormalize to Γ = 2π * 6 * 1e6 (MHz)
-const Ωp    = 3Γ
+const Ωp    = (1/100)Γ
+const Ωc    = 0Γ
 const gs    = 1Γ
-const κs    = 1Γ
-const κas   = 1Γ
+const gas   = 0Γ
+const κs    = 100Γ
+const κas   = 0Γ
 const ω2    = 0
 const γ42   = 0
 const γ41   = 0
@@ -72,13 +72,14 @@ const γ21   = 0
 const Δp    = 10Γ
 const Δc    = 1.2Γ
 
+
 # define gas and Ωc in dependence on the parameters gs, Ωp of the Stokes photon generation
 # gas = ( (4 * κas * gs^2 * Ωp^2 * (((γ31 + γ32) / 2)^2 + Δc^2)) / (κs * Δp^2) )^(1/4)
 
 # gas = sqrt(-((2*Δc^2)/((γ31+γ32)^2)) + sqrt((κas/κs) * ((gs^2*Ωp^2)/Δp^2) * (1 + ((4*Δc^2)/(γ31+γ32)^2))))
 
-Ωc = 1.15Γ
-gas = sqrt(κas/κs * (gs^2*Ωp^2)/(Δp^2) * ((γ31 + γ32)^2 + 4*Δc^2)/(Ωc^2*(γ31+γ32)^2 + 4*Δc^2))
+# Ωc = 1.15Γ
+# gas = sqrt(κas/κs * (gs^2*Ωp^2)/(Δp^2) * ((γ31 + γ32)^2 + 4*Δc^2)/(Ωc^2*(γ31+γ32)^2 + 4*Δc^2))
 
 #################################################
 #      check for superradiant laser regime      #
